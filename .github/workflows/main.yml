@@ -1,11 +1,15 @@
 name: Build and Push Docker image to ECR
 
 on:
-  push:  # Triggers on every push to any branch
-    branches: ["*"]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [closed]
 
 jobs:
   build-and-push:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
 
     steps:
@@ -30,19 +34,19 @@ jobs:
       - name: Get commit message and slugify
         id: commitmsg
         run: |
-          # Get the commit message, slugify it (lowercase, replace spaces with hyphens, remove special chars)
           MSG=$(git log -1 --pretty=%B | head -n 1)
           SLUG=$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9\-]//g')
+          if [ -z "$SLUG" ]; then SLUG="no-message"; fi
           echo "slug=$SLUG" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
         run: |
           docker build -t team-qb .
 
-      - name: Tag Docker image with latest:<commit-message-slug>
+      - name: Tag Docker image with latest-<commit-message-slug>
         run: |
-          docker tag team-qb:latest 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest:${{ steps.commitmsg.outputs.slug }}
+          docker tag team-qb:latest 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest-${{ steps.commitmsg.outputs.slug }}
 
       - name: Push Docker image to ECR
         run: |
-          docker push 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest:${{ steps.commitmsg.outputs.slug }}
+          docker push 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest-${{ steps.commitmsg.outputs.slug }}
