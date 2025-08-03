@@ -1,6 +1,7 @@
 {
   "family": "team-qb-task",
   "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::590184134827:role/ecsTaskExecutionRole_Team-QB",
   "containerDefinitions": [
     {
       "name": "team-qb",
