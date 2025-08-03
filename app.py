@@ -39,7 +39,7 @@ from typing import List, Dict
 load_dotenv()
 
 UPLOAD_FOLDER = 'uploads'  # Define your upload directory
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'md'} # Define allowed extensions
+ALLOWED_EXTENSIONS = {'txt'} # Define allowed extensions
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', UPLOAD_FOLDER)  # Use environment variable or default
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default_secret_key')
