@@ -212,4 +212,5 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 if __name__ == '__main__':
     # Note: `debug=True` is great for development but should be `False` in production.
     # `use_reloader=False` can be helpful if you are running setup tasks.
-    app.run(debug=True)
+    ###changes done by sanket##
+    app.run(app.run(host="0.0.0.0", port=5000, debug=True))
