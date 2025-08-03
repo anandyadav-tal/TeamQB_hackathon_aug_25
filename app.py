@@ -42,7 +42,7 @@ UPLOAD_FOLDER = 'uploads'  # Define your upload directory
 ALLOWED_EXTENSIONS = {'txt'} # Define allowed extensions
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', UPLOAD_FOLDER)  # Use environment variable or default
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default_secret_key')
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 class DiagramAnalysis(BaseModel):
     """Data model for the diagram analysis portion of the report."""
