@@ -1,57 +1,45 @@
 name: Build and Push Docker image to ECR
-
+ 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
     types: [closed]
-
+ 
 jobs:
   build-and-push:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
-
+ 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+ 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
+ 
       - name: Create .env file
         run: |
           echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" > .env
           echo "UPLOAD_FOLDER=uploads" >> .env
-
+ 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
-
+ 
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ap-south-1 | \
           docker login --username AWS --password-stdin 590184134827.dkr.ecr.ap-south-1.amazonaws.com
-
-      - name: Get commit message and slugify
-        id: commitmsg
-        run: |
-          MSG=$(git log -1 --pretty=%B | head -n 1)
-          SLUG=$(echo "$MSG" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9\-]//g')
-          if [ -z "$SLUG" ]; then SLUG="no-message"; fi
-          echo "slug=$SLUG" >> $GITHUB_OUTPUT
-
+ 
       - name: Build Docker image
         run: |
-          docker build -t team-qb .
-
-      - name: Tag Docker image with latest-<commit-message-slug>
-        run: |
-          docker tag team-qb:latest 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest-${{ steps.commitmsg.outputs.slug }}
-
+          docker build -t 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest .
+ 
       - name: Push Docker image to ECR
         run: |
-          docker push 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest-${{ steps.commitmsg.outputs.slug }}
+          docker push 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest
