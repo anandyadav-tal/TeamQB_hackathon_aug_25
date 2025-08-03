@@ -1,6 +1,7 @@
 {
   "family": "team-qb-task",
   "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::590184134827:role/ecsTaskExecutionRole_Team-QB",
   "containerDefinitions": [
     {
       "name": "team-qb",
@@ -8,7 +9,7 @@
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 5000,   // <-- Confirm this port!
+          "containerPort": 5000,
           "protocol": "tcp"
         }
       ],
@@ -17,7 +18,6 @@
           "name": "UPLOAD_FOLDER",
           "value": "uploads"
         }
-        // Add more env vars as needed
       ]
     }
   ],
