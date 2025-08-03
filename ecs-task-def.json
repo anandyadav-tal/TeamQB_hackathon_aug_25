@@ -8,7 +8,7 @@
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 5000,   // <-- Confirm this port!
+          "containerPort": 5000,
           "protocol": "tcp"
         }
       ],
@@ -17,7 +17,6 @@
           "name": "UPLOAD_FOLDER",
           "value": "uploads"
         }
-        // Add more env vars as needed
       ]
     }
   ],
