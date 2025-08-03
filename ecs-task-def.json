@@ -1,0 +1,27 @@
+{
+  "family": "team-qb-task",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "team-qb",
+      "image": "<IMAGE_URI_PLACEHOLDER>",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5000,   // <-- Confirm this port!
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "UPLOAD_FOLDER",
+          "value": "uploads"
+        }
+        // Add more env vars as needed
+      ]
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512"
+}
