@@ -23,4 +23,4 @@
 				- SKU
 					- Add, Update, Delete SKUs for a Product
 					- Each SKU must belong to a valid Product
-					- Return all SKUs of a product
+					- Return all SKUs of a product.
