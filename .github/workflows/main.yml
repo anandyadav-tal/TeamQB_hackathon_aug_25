@@ -1,11 +1,11 @@
-name: Build and Push Docker image to ECR
+name: Build, Push, and Deploy to ECS
 
 on:
   push:
     branches: [main]
 
 jobs:
-  build-and-push:
+  build-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -39,3 +39,19 @@ jobs:
       - name: Push Docker image to ECR
         run: |
           docker push 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest
+
+      - name: Fill in the new image ID in the ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ecs-task-def.json
+          container-name: team-qb
+          image: 590184134827.dkr.ecr.ap-south-1.amazonaws.com/team-qb:latest
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: team-qb-task-service
+          cluster: team-qb-cluster
+          wait-for-service-stability: true
