@@ -180,15 +180,18 @@ def upload_file():
 
 def get_uploaded_documentation():
     """Helper function to retrieve the uploaded documentation file."""
-    print(flask.session)
-    if 'uploaded_file' in flask.session:
-        uploaded_file = flask.session['uploaded_file']
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                content = f.read()
-                flask.session.pop('uploaded_file')  # Clear the uploaded file name from the session after reading
-                return content
+    try:
+        print(flask.session)
+        if 'uploaded_file' in flask.session:
+            uploaded_file = flask.session['uploaded_file']
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+            if os.path.exists(file_path):
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                    flask.session.pop('uploaded_file')  # Clear the uploaded file name from the session after reading
+                    return content
+    except Exception as e:
+        print(f"Error retrieving uploaded documentation: {e}")
     return ""  # Return empty string if no file is uploaded or file doesn't exist
 
 @app.route('/analyze', methods=['POST'])
