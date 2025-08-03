@@ -1,5 +1,11 @@
-# JIRA Requirement Analysis Agent: Use Case & Value
+# JIRA Requirement Analysis Agent:
 
+### 👥 Team Members:
+**-Anand** **-Aman** **-Sharad** **-Urmi** **-Kiran** **-Sanket** **-Vrushal** **-Aniruddha** **-Shankar**
+
+
+
+## Use Case & Value
 ## The Problem: The High Cost of Ambiguity
 
 In any software development team, the journey from a business idea to a functional feature begins with a requirement, typically documented in a JIRA ticket. However, this initial step is often a major source of inefficiency and risk:
