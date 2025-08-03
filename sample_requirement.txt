@@ -1,0 +1,26 @@
+- Build a simple e-commerce inventory management service which can be used to manage the inventory.
+			- For now, this service should provide utility to manage the following entities
+				- Category: Used to group products (e.g., Electronics, Apparel).
+				- Product: Represents a general product concept (e.g., "iPhone 15").
+				- SKU: Represents a sellable variant of a product (e.g., "iPhone 15 - 128GB - Black")
+			- The above mentioned entities are related as follows
+				- A Product belongs to one Category.
+				- A Product can have many SKUs.
+				- A SKU belongs to one Product.
+				
+		- Work Requested
+			- Build Rest APIs for
+				- Category
+					- Create, Read, Update, Delete Categories
+					- List all categories
+				- Product
+					- Create, Read, Update, Delete Products
+					- List Products with:
+						- Search by product name
+						- Filter by category
+						- Pagination (page & pageSize params)
+					- Each Product must belong to an existing Category
+				- SKU
+					- Add, Update, Delete SKUs for a Product
+					- Each SKU must belong to a valid Product
+					- Return all SKUs of a product

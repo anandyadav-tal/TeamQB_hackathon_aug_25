@@ -1,0 +1,14 @@
+<!doctype html>
+<title>Upload new Document</title>
+<h1>Upload new Document</h1>
+<form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="file" required />
+    <button type="submit">Upload</button>
+</form>
+<script src="/static/scripts/upload.js"></script>
+{% if error %}
+  <p style="color: red;">{{ error }}</p>
+{% endif %}
+{% if success %}
+  <p style="color: green;">{{ success }}</p>
+{% endif %}

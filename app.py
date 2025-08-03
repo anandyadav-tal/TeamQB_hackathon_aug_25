@@ -26,7 +26,9 @@
 
 import os
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+import flask
+from werkzeug.utils import secure_filename
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
@@ -36,22 +38,42 @@ from typing import List, Dict
 # --- Configuration & Initialization ---
 load_dotenv()
 
+UPLOAD_FOLDER = 'uploads'  # Define your upload directory
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'md'} # Define allowed extensions
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = os.getenv('UPLOAD_FOLDER', UPLOAD_FOLDER)  # Use environment variable or default
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default_secret_key')
 
-# --- 1. Define the Structured Output for the AI ---
-# This Pydantic model tells the AI exactly how to format its response.
-# This ensures we get reliable, structured JSON every time.
-class RequirementAnalysis(BaseModel):
-    """Data model for a JIRA requirement analysis."""
+class DiagramAnalysis(BaseModel):
+    """Data model for the diagram analysis portion of the report."""
+    is_required: bool = Field(description="A boolean flag. Set to true if a diagram is helpful, otherwise false.")
+    mermaid_script: str = Field(description="If is_required is true, provide a valid Mermaid.js script for a flowchart or sequence diagram. If false, provide a brief explanation why a diagram is not needed.")
+
+class DeveloperView(BaseModel):
+    """Analysis from a developer's perspective."""
+    potential_blockers: List[str] = Field(description="A list of potential technical or logical blockers, dependencies, or risks.")
+    complexity: str = Field(description="A qualitative complexity score (Low, Medium, High) for the development effort.")
+    diagram_analysis: DiagramAnalysis = Field(description="An analysis of whether a diagram is needed and the corresponding Mermaid.js script if it is.")
+
+class QAView(BaseModel):
+    """Analysis from a QA engineer's perspective."""
+    required_testing: Dict[str, List[str]] = Field(description="A dictionary outlining functional tests and edge cases for QA. Keys should be 'functional_tests' and 'edge_cases'.")
+    complexity: str = Field(description="A qualitative complexity score (Low, Medium, High) for the QA effort.")
+
+class ProductManagerView(BaseModel):
+    """Analysis from a Product Manager's perspective."""
     clarifying_questions: List[str] = Field(description="Questions for the product owner to fill in missing details or resolve ambiguities.")
     acceptance_criteria_review: List[Dict[str, str]] = Field(description="A review of existing acceptance criteria, suggesting improvements or new criteria. Each item should have a 'criteria' and a 'suggestion'.")
-    potential_blockers: List[str] = Field(description="A list of potential technical or logical blockers, dependencies, or risks.")
-    required_testing: Dict[str, List[str]] = Field(description="A dictionary outlining functional tests and edge cases for QA. Keys should be 'functional_tests' and 'edge_cases'.")
-    complexity_analysis: Dict[str, str] = Field(description="A qualitative complexity score (Low, Medium, High) for both development and QA efforts. Keys should be 'development' and 'qa'.")
+
+class RequirementAnalysis(BaseModel):
+    """The main data model for a comprehensive, role-based JIRA requirement analysis."""
+    developer_view: DeveloperView
+    qa_view: QAView
+    product_manager_view: ProductManagerView
 
 # --- 2. The Core AI Logic ---
 
-def analyze_jira_ticket(ticket_description: str):
+def analyze_jira_ticket(ticket_description: str, documentation: str = "") -> Dict:
     """
     Analyzes a JIRA ticket description using the Gemini model.
 
@@ -71,29 +93,37 @@ def analyze_jira_ticket(ticket_description: str):
     # The prompt is the most critical piece. It's engineered to make the AI
     # adopt different personas and structure its thinking process.
     prompt_template = """
-    You are an expert AI assistant designed to analyze software requirements for an agile team.
-    Your task is to thoroughly analyze the following JIRA ticket description from three perspectives:
-    1.  **A Senior Developer:** Focus on technical feasibility, potential blockers, and implementation details.
-    2.  **A QA Engineer:** Focus on testability, edge cases, and ensuring the requirements are clear enough to write test plans.
-    3.  **A Product Manager:** Focus on clarity, completeness, and business value.
+    You are an expert AI assistant for an agile software team. Your primary task is to analyze a JIRA ticket and provide a comprehensive, structured analysis broken down by team roles.
 
     **Analysis Process:**
-    1.  **Internal Monologue (Chain of Thought):** First, think step-by-step about the request. Identify the core feature, the user, and the goal. Break down the requirements into smaller pieces. Consider what information is present and what is missing.
-    2.  **Generate the Analysis:** Based on your internal monologue, generate a complete analysis. Fill in all the required fields. Be concise but thorough.
+    In a single pass, analyze the JIRA ticket and the provided documentation, if any, from the perspectives of a Developer, a QA Engineer, and a Product Manager.
 
+    - **For the Developer View:** Focus on technical feasibility, implementation risks, dependencies, and decide if a visual diagram is necessary to explain the workflow.
+    - **For the QA View:** Focus on testability, identifying functional and edge case scenarios, and assessing testing complexity.
+    - **For the Product Manager View:** Focus on requirement clarity, completeness, business value, and suggest improvements to acceptance criteria.
+
+    **Diagram Decision:** As part of the developer analysis, make a specific decision: Does this ticket describe a multi-step process, user flow, or system interaction that would be clarified by a visual diagram?
+        - If YES, set `is_required` to `true` and generate a concise Mermaid.js script.
+        - If NO (e.g., it's a simple bug fix or text change), set `is_required` to `false` and briefly explain why a diagram isn't necessary.
+    
     **JIRA TICKET DESCRIPTION:**
     ---
     {ticket_description}
     ---
 
+    **DOCUMENTATION (if any):**
+    ---
+    {documentation}
+    ---
+
     **OUTPUT FORMAT:**
-    Provide your final analysis in a valid JSON object that strictly follows this format:
+    Combine all findings into a single, valid JSON object that strictly follows the nested format requested below. Do not deviate from this structure.
     {format_instructions}
     """
-
+    print(documentation)
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["ticket_description"],
+        input_variables=["ticket_description", "documentation"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
 
@@ -102,7 +132,7 @@ def analyze_jira_ticket(ticket_description: str):
 
     print("Invoking AI model to analyze the ticket...")
     try:
-        analysis_result = chain.invoke({"ticket_description": ticket_description})
+        analysis_result = chain.invoke({"ticket_description": ticket_description, "documentation": documentation})
         return analysis_result
     except Exception as e:
         print(f"An error occurred during AI analysis: {e}")
@@ -116,8 +146,50 @@ def analyze_jira_ticket(ticket_description: str):
 
 @app.route('/')
 def index():
-    """Renders the main HTML page."""
-    return render_template('index.html')
+    """Renders the main page with the upload form."""
+    # Clear the uploaded_file key from the session on every page load
+    if 'uploaded_file' in flask.session:
+        flask.session.pop('uploaded_file')  # Clear the uploaded file name from the session
+
+    upload_form = render_template('upload.html')
+    return render_template('index.html', upload_form=upload_form)
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    """Handles file uploads."""
+    print("Handling file upload...")
+    if request.method == 'POST':
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            return render_template('upload.html', error="No file part in the request.")
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an empty file without a filename.
+        if file.filename == '':
+            return render_template('upload.html', error="No file selected.")
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            flask.session['uploaded_file'] = filename  # Save the uploaded file name in the session
+            return jsonify({"success": True, "message": "File uploaded successfully."})  # Return JSON response for AJAX
+    return render_template('upload.html')
+
+
+def get_uploaded_documentation():
+    """Helper function to retrieve the uploaded documentation file."""
+    print(flask.session)
+    if 'uploaded_file' in flask.session:
+        uploaded_file = flask.session['uploaded_file']
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file)
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                content = f.read()
+                flask.session.pop('uploaded_file')  # Clear the uploaded file name from the session after reading
+                return content
+    return ""  # Return empty string if no file is uploaded or file doesn't exist
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -127,11 +199,15 @@ def analyze():
 
     if not ticket_description or len(ticket_description.strip()) < 20:
         return jsonify({"error": "Please provide a JIRA ticket description of at least 20 characters."}), 400
-
-    result = analyze_jira_ticket(ticket_description)
+    # Optional: If you have documentation, you can pass it as well
+    documentation = get_uploaded_documentation()
+    result = analyze_jira_ticket(ticket_description, documentation)
 
     return jsonify(result)
 
+
+# Ensure the upload folder exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 if __name__ == '__main__':
     # Note: `debug=True` is great for development but should be `False` in production.
