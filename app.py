@@ -85,7 +85,7 @@ def analyze_jira_ticket(ticket_description: str, documentation: str = "") -> Dic
     """
     # Initialize the Gemini model
     # Using gemini-1.5-flash for its speed, large context, and reasoning capabilities.
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2, api_key="AIzaSyASRVLY3n7c_9peyySMrKyVd5s78AOUoPk")
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
 
     # Set up the output parser
     parser = JsonOutputParser(pydantic_object=RequirementAnalysis)
